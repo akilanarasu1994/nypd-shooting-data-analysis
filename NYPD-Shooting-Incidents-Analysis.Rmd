@@ -1,0 +1,156 @@
+---
+title: "NYPD Shooting Analysis"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This report tries to analyze and answer questions related to rate of crime from NYPD incident reports since
+2005 based on the gender and race of the victims and the perpetrators.
+
+
+**IMPORTING THE LIBRARIES:**
+
+```{r libraries}
+library(tidyverse)
+library(lubridate)
+```
+
+
+
+**IMPORTING THE DATA:**
+
+```{r import_data}
+url_in <-"https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD"
+shooting_data <- read_csv(url_in)
+head(shooting_data)
+```
+
+**CLEANING THE DATA:**
+
+To clean the data, we first drop the columns that are not required for our analysis. In this case, we are dropping the columns X_COORD_CD, Y_COORD_CD, Latitude, Longitude, Lon_Lat. 
+
+```{r remove_unwanted_columns}
+shooting_data <- shooting_data %>% select(-c(X_COORD_CD,Y_COORD_CD,Latitude,Longitude,Lon_Lat))
+summary(shooting_data)
+```
+
+
+
+Next, we change the datatype of `OCCUR_DATE` from **chr** to **date**. We accomplish this using the *lubridate* library.
+
+```{r change_date_datatype}
+shooting_data <- shooting_data %>% mutate(OCCUR_DATE = mdy(OCCUR_DATE))
+```
+
+
+
+We also look for **NULL** values and omit such rows:
+
+```{r checking_NULL_values}
+colSums(is.na(shooting_data))
+na.omit(shooting_data)
+```
+
+
+
+
+**ANALYSIS:**
+&nbsp;&nbsp;
+We visualize the victim data by gender in each BORO. By faceting the number of shooting incidents by victim race, we can see a clear breakdown of victims by race in each BORO.
+
+```{r visualisation_1}
+ggplot(shooting_data) +
+  geom_bar(aes(x = BORO, fill = BORO)) +
+  facet_wrap( ~ VIC_SEX) +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.title = element_blank()
+  ) +
+  labs(title = "Shooting Victims in New York by Victim's Gender in each Borough", y = NULL)
+```
+
+
+
+
+Similarly we visualize the Perp data according to gender in each BORO.
+
+```{r visualisation_2}
+ggplot(shooting_data) +
+  geom_bar(aes(x = BORO, fill = BORO)) +
+  facet_wrap( ~ PERP_SEX) +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.title = element_blank()
+  ) +
+  labs(title = "Perp Gender in each Borough", y = NULL)
+```
+
+
+
+From the above plot we realize that according to the data set males are the predominant gender who are perpetrators in these incidents.
+Next, we analyze the number of males by race in each borough. In order to accomplish this, we first drop the non-male records from 
+the data set(clean), then the records with unknown race:
+
+```{r removing non-male and unknown race records}
+shooting_data_male <- shooting_data %>% filter(PERP_SEX == "M") 
+shooting_data_male <- shooting_data_male %>% filter(PERP_RACE != "UNKNOWN") 
+```
+
+
+
+
+Finally, we plot the data:
+
+```{r visualisation_3}
+ggplot(shooting_data_male) +
+  geom_bar(aes(x = PERP_RACE, fill = PERP_RACE)) +
+  facet_wrap( ~ BORO) +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()
+  ) +
+  labs(title = "Male Shooting Perpetrators in New York by Race in each Borough", y = NULL)
+```
+
+
+
+
+Here, we analyze the statistical murder data by gender.
+
+```{r visualisation_4}
+ggplot(shooting_data) +
+  geom_bar(aes(x = STATISTICAL_MURDER_FLAG, fill = STATISTICAL_MURDER_FLAG)) +
+  facet_wrap( ~ PERP_SEX) +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.title = element_blank()
+  ) +
+  labs(title = "Statistical Murder Data by Perp Gender", y = NULL)
+```
+
+
+
+
+**CONCLUSION:**
+
+By analyzing the data, we find that the most of the perpetrators are male while the victims are also overwhelmingly male. We can clearly note that males from the Bronx and Brooklyn seem to be more likely to be part of or be a victim of shooting incidents. This is a worrying trend. It could imply that the male population from these areas are not being paid attention to, in the sense that maybe they are not being offered opportunities to productively 
+utilize their time, either at work or at school. I admit that this data set alone does not paint the entire picture and that we need to analyze the demography by the economic, social and health perspectives as well. 
+
+This analysis was done with the data collected from reported incidents. Unfortunately, a lot of incidents go unreported. Including those incidents may change the conclusion of this report. This is a potential bias. Another source of potential bias is the fact that there are a lot of `NULL` values in the race and gender columns. This could mean that either the data was unavailable or that the reporting officer failed to mention it in their incident report.
+
